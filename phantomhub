@@ -1,0 +1,648 @@
+--// SERVICIOS
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+--// BASE DE DATOS DE HABILIDADES
+local abilityData = {
+    -- Starter Abilities
+    ["Rock Throw"] = {ID = 34, RemoteNames = {"rock-hit"}},
+    ["Magic Missile"] = {ID = 1, RemoteNames = {"strike"}},
+
+    -- Mage
+    ["Mana Bomb"] = {ID = 4, RemoteNames = {"holo"}},
+    ["Thundercall"] = {ID = 77, RemoteNames = {"strike"}},
+    ["Zap"] = {ID = 32, RemoteNames = {"bolt"}},
+
+    -- Warrior
+    ["Spin Slash"] = {ID = 26, RemoteNames = {"uppercut"}},
+    ["Blasting Slash"] = {ID = 80, RemoteNames = {"aftershock-1", "aftershock-2", "aftershock-3", "tombSpike"}},
+    ["Ground Slam"] = {ID = 5, RemoteNames = {"spike", "warlord", "warlord-outer", "divineSlam", "divineSlam-sword", "divineSlam-outer", "shockwave", "shockwave-outer", "slash", "aftershock", "agile-strike", "bee-attack", "ghost-fire", "ghost-explode", "ghost-ring"}},
+
+    -- Hunter
+    ["Execute"] = {ID = 6, RemoteNames = {"strike", "echo", "strike_aoe", "echo_aoe", "shadowblast", "bleed"}},
+    ["Barrage"] = {ID = 15, RemoteNames = {"arrow-1", "arrow-2", "arrow-3", "holo-direct", "holo-reflect", "jade-dot", "ghost-fire", "boom"}},
+    ["Shunpo"] = {ID = 13, RemoteNames = {"dash-through", "icicle", "icicle-bomb", "ghost-explode", "ghost-fire", "ghost-ring", "mumpo-hit", "mumpo-slice"}},
+
+    -- Warlock (Mage Subclass)
+    ["Pillage Vitality"] = {ID = 40, RemoteNames = {"bolt", "fireworks"}},
+    ["Dark Pulse"] = {ID = 59, RemoteNames = {"pulse"}},
+    ["Desecrate"] = {ID = 64, RemoteNames = {"pulse"}},
+    ["Blood Plague"] = {ID = 78, RemoteNames = {"dot"}},
+    ["Chain Binding"] = {ID = 69, RemoteNames = {"bolt"}},
+
+    -- Sorcerer
+    ["Frost Storm"] = {ID = 103, RemoteNames = {"blizzard", "blizzard-burst", "iceExplosion"}},
+    ["Earth Call"] = {ID = 104, RemoteNames = {"boulder", "seismic"}},
+    ["Meteor Storm"] = {ID = 102, RemoteNames = {"explosion", "burn"}},
+    ["Unstable Charge"] = {ID = 100, RemoteNames = {"bolt", "electrified"}},
+    ["Howling Gale"] = {ID = 99, RemoteNames = {"tornado"}},
+
+    -- Cleric
+    ["Spear of Light"] = {ID = 67, RemoteNames = {"spear", "blast"}},
+    ["Flare"] = {ID = 50, RemoteNames = {"flare"}},
+    ["Judgement"] = {ID = 137, RemoteNames = {"excise", "retribution"}},
+    ["Holy Surge"] = {ID = 168, RemoteNames = {"beam-impact"}},
+    ["Light Barrage"] = {ID = 167, RemoteNames = {"barrage", "barrage_prime"}},
+
+    -- Songweaver
+    ["Vibrato"] = {ID = 544, RemoteNames = {"note", "note_encore"}},
+    ["Aria Wave"] = {ID = 541, RemoteNames = {"wave"}},
+
+    -- Paladin (Warrior Subclass)
+    ["Rebuke"] = {ID = 56, RemoteNames = {"blast", "blast_dullThud", "jadePulse"}},
+    ["Consecrate"] = {ID = 70, RemoteNames = {"blast", "pulse", "ghost-fire", "ghost-explode", "ghost-link"}},
+    ["Smite"] = {ID = 48, RemoteNames = {"smite", "thunder"}},
+
+    -- Berserker
+    ["Ferocious Assault"] = {ID = 60, RemoteNames = {"strike"}},
+    ["Blade Spin"] = {ID = 55, RemoteNames = {"spin"}},
+    ["Headlong Dive"] = {ID = 68, RemoteNames = {"impact", "firworks"}},
+    ["Blood Cleave"] = {ID = 131, RemoteNames = {"cleave", "cleave-projectile", "bleed"}},
+
+    -- Knight
+    ["Shield Bash"] = {ID = 61, RemoteNames = {"chargefire", "strike", "tsunami", "jade", "jadeExplosion"}},
+    ["Cleave"] = {ID = 128, RemoteNames = {"aftershock1", "aftershock2", "aftershock3", "aftershock4", "aftershock5", "wave"}},
+    ["Chain Pull"] = {ID = 127, RemoteNames = {"chain", "ghostflame_tick"}},
+    ["Defensive Stance"] = {ID = 129, RemoteNames = {"explosion", "holo"}},
+
+    -- Bard (Hunter Subclass)
+    ["Crescendo"] = {ID = 92, RemoteNames = {"note", "eighth-note", "burst"}},
+    ["Lullaby"] = {ID = 93, RemoteNames = {"lullaby"}},
+
+    -- Assassin
+    ["Shadow Flurry"] = {ID = 43, RemoteNames = {"strike", "fireworks"}},
+    ["Ethereal Strike"] = {ID = 79, RemoteNames = {"throw", "teleport"}},
+    ["Shadow Volley"] = {ID = 164, RemoteNames = {"impact"}},
+
+    -- Trickster
+    ["Prism Trap"] = {ID = 42, RemoteNames = {"trap"}},
+    ["Switch Strike"] = {ID = 41, RemoteNames = {"bolt"}},
+    ["Bubble Burst"] = {ID = 65, RemoteNames = {"bolt1", "bolt2", "bolt3"}},
+    ["Disengage"] = {ID = 51, RemoteNames = {"shot"}},
+
+    -- Ranger
+    ["Hail of Arrows"] = {ID = 36, RemoteNames = {"quarterSecondDamage"}},
+    ["Ricochet"] = {ID = 31, RemoteNames = {"initial", "bounce"}},
+}
+
+--// LISTA DE MOBS (CONVERTIDA A SET PARA BÚSQUEDA O(1))
+local mobSet = {}
+local listaDeMobs = {
+    "Eldering Shroom", "Dummy", "Chicken", "Crabby", "Elder Shroom", "Ent Sapling", "Goblin", "Guardian", "Rubee", "Scarecrow", "Shroom", "Spider", "Spider Queen", "Spiderling", "Moglo", "Ratty", "Batty", "Trickster Spirit", "Baby Yeti", "Undead", "The Yeti", "Hog", "Redwood Bandit", "Mo Ko Tu Aa", "Treemuk", "Terror of the Deep", "Bandit Skirmisher", "Bandit", "Shaman", "Chad", "Guardian Dummy", "Horseshoe Crab", "Mogloko", "Stingtail", "Scarab", "Dustwurm", "Gauntlet Gate", "Deathsting", "Possum the Devourer", "Slime", "Baby Slime", "Big Slime", "Baby Yeti Tribute", "Pit Ratty", "Reanimated Slime", "Gorgog Guardian", "Aevrul", "Pirate", "Rootbeard", "Tortoise", "Bamboo Mage", "Humanoid", "Shade", "Skull Boss", "Parasite Host", "Frightcrow", "Enchanted Slime", "Rock Slime", "Reaper", "Tumbleweed", "Monster", "Battering Shroom", "Ethera", "Pirate Captain", "Miner Prisoner", "First Mate", "Birthday Mage", "Fish", "Pirate Summon", "Parasite", "Orc", "Hermit Crabby", "Sunken Savage", "Cultist", "Wisp", "Runic Titan", "Tribute Gate", "Mosquito Parasite", "Gecko", "Prisoner", "Skeleton", "Mama Hermit Crabby", "Boar", "Book", "Crow", "Fly Trap", "Lost Spirit", "Enchiridion", "Jellyfish", "Mimic Jester", "Snel", "Ram", "Bear", "Redwood Bandit Leader", "Baby Scarab", "Bushi", "Ronin", "Samurai", "Sensei", "Shinobi", "Dark Cleric", "Master Miyamoto", "Dragon Boss", "Mummy", "Cow", "Dragon Monk", "Kobra", "Hag", "Ethereal Monarch", "Ghostflame Wisp", "Soulcage", "Baby Shroom", "Bull", "Mimic", "Toni", "Tal Rey", "Scorpentar", "Tombwurm"
+}
+
+-- Crear set para búsqueda rápida
+for _, mobName in ipairs(listaDeMobs) do
+    mobSet[mobName] = true
+end
+
+
+
+--// VARIABLES DE OPTIMIZACIÓN
+local cachedGUID, cachedID = nil, nil
+local cachedMobs = {}
+local lastMobUpdate = 0
+local lastAbilityUpdate = 0
+local MOB_CACHE_INTERVAL = 0.5 -- Actualizar mobs cada 0.5 segundos
+local ABILITY_CHECK_INTERVAL = 0.2 -- Verificar habilidad cada 0.2 segundos
+local ATTACK_INTERVAL = 0.15 -- Atacar cada 0.15 segundos
+local MOBS_PER_BATCH = 5 -- Cantidad de mobs por grupo de ataque
+local REPETICIONES_POR_MOB = 5 -- Cantidad de veces que se repite cada ataque por mob
+
+-- Variables para el sistema de grupos rotativos
+local currentMobIndex = 1
+local allMobsList = {}
+
+-- Cache de RemoteNames para evitar búsquedas repetitivas
+local remoteNamesCache = {}
+for _, data in pairs(abilityData) do
+    remoteNamesCache[data.ID] = data.RemoteNames
+end
+
+--// VARIABLES DE CONFIGURACIÓN
+local config = {
+    enabled = false,
+    autoAttack = false,
+    showNotifications = true,
+    attackInterval = 0.15,
+    mobsPerBatch = 5,
+    repetitionsPerMob = 5,
+    mobCacheInterval = 0.5,
+    abilityCheckInterval = 0.2,
+    selectedAbility = "Todas",
+    selectedMobType = "Todos",
+    debugMode = false
+}
+
+--// FUNCIONES DE UTILIDAD OPTIMIZADAS
+local function isValidGUID(guid)
+    return typeof(guid) == "string" and #guid == 36 and string.match(guid, "^%x+%-%x+%-%x+%-%x+%-%x+$") ~= nil
+end
+
+local function isValidExecutionData(data)
+    return typeof(data) == "table" and data["id"] ~= 0 and isValidGUID(data["ability-guid"])
+end
+
+local function getAbilityGUIDFromData(dataTable)
+    for _, data in pairs(dataTable) do
+        if isValidExecutionData(data) then
+            return data["ability-guid"], data["id"]
+        end
+    end
+    return nil, nil
+end
+
+local function getAbilityGUIDAndID()
+    local player = Players.LocalPlayer
+    local charModel = workspace.placeFolders.entityManifestCollection:FindFirstChild(player.Name)
+    if not charModel then return nil end
+
+    local Hitbox = charModel:FindFirstChild("hitbox")
+    if not Hitbox then return nil end
+
+    local ExecutionDataValue = Hitbox:FindFirstChild("activeAbilityExecutionData")
+    if not ExecutionDataValue or not ExecutionDataValue.Value then return nil end
+
+    local success, parsed = pcall(function()
+        return HttpService:JSONDecode(ExecutionDataValue.Value)
+    end)
+    if not success or typeof(parsed) ~= "table" then
+        return nil
+    end
+
+    if isValidExecutionData(parsed) then
+        return parsed["ability-guid"], parsed["id"]
+    end
+
+    return getAbilityGUIDFromData(parsed)
+end
+
+--// FUNCIÓN OPTIMIZADA PARA OBTENER MOBS (CON CACHE)
+local function actualizarCacheMobs()
+    local nuevoCache = {}
+    local nuevaListaTotal = {}
+    local entityCollection = workspace.placeFolders.entityManifestCollection:GetChildren()
+    
+    for i = 1, #entityCollection do
+        local instancia = entityCollection[i]
+        if instancia:IsA("BasePart") and mobSet[instancia.Name] then
+            -- Filtrar por tipo de mob seleccionado
+            if config and (config.selectedMobType == "Todos" or instancia.Name == config.selectedMobType) then
+                if not nuevoCache[instancia.Name] then
+                    nuevoCache[instancia.Name] = {}
+                end
+                table.insert(nuevoCache[instancia.Name], instancia)
+                table.insert(nuevaListaTotal, instancia)
+            end
+        end
+    end
+    
+    cachedMobs = nuevoCache
+    allMobsList = nuevaListaTotal
+    
+    -- Resetear índice si es necesario
+    if currentMobIndex > #allMobsList then
+        currentMobIndex = 1
+    end
+    
+    -- Debug si está activado
+    if config and config.debugMode then
+        print("Cache actualizado - Mobs encontrados:", #nuevaListaTotal)
+    end
+end
+
+--// FUNCIÓN OPTIMIZADA DE ATAQUE (GRUPOS DE 5 MOBS x 5 REPETICIONES)
+local function ejecutarAtaqueOptimizado()
+    if not config.enabled or not config.autoAttack then return end
+    if not cachedGUID or not cachedID or #allMobsList == 0 then return end
+    
+    -- Verificar si la habilidad seleccionada coincide
+    if config.selectedAbility ~= "Todas" then
+        local abilityFound = false
+        for name, data in pairs(abilityData) do
+            if name == config.selectedAbility and data.ID == cachedID then
+                abilityFound = true
+                break
+            end
+        end
+        if not abilityFound then return end
+    end
+    
+    local remoteNames = remoteNamesCache[cachedID]
+    if not remoteNames then return end
+    
+    local remoteEvent = ReplicatedStorage:WaitForChild("network"):WaitForChild("RemoteEvent"):WaitForChild("playerRequest_damageEntity_batch")
+    
+    -- Crear grupo actual de mobs para atacar
+    local grupoActual = {}
+    local mobsProcessados = 0
+    
+    -- Obtener hasta MOBS_PER_BATCH mobs comenzando desde currentMobIndex
+    while mobsProcessados < config.mobsPerBatch and #allMobsList > 0 do
+        if currentMobIndex > #allMobsList then
+            currentMobIndex = 1 -- Reiniciar el ciclo
+        end
+        
+        local mob = allMobsList[currentMobIndex]
+        
+        -- Verificar que el mob aún existe
+        if mob and mob.Parent then
+            table.insert(grupoActual, mob)
+            mobsProcessados = mobsProcessados + 1
+        else
+            -- Si el mob no existe, lo removemos de la lista
+            table.remove(allMobsList, currentMobIndex)
+            currentMobIndex = currentMobIndex - 1 -- Ajustar índice
+        end
+        
+        currentMobIndex = currentMobIndex + 1
+        
+        -- Evitar loop infinito si no hay mobs válidos
+        if #allMobsList == 0 then
+            break
+        end
+    end
+    
+    -- Crear ataques para el grupo actual con repeticiones
+    if #grupoActual > 0 then
+        local ataquesGrupo = {}
+        
+        for i = 1, #grupoActual do
+            local mob = grupoActual[i]
+            for j = 1, #remoteNames do
+                local remoteName = remoteNames[j]
+                -- Repetir cada ataque REPETICIONES_POR_MOB veces
+                for rep = 1, config.repetitionsPerMob do
+                    table.insert(ataquesGrupo, {
+                        mob,
+                        mob.Position,
+                        "ability",
+                        cachedID,
+                        remoteName,
+                        cachedGUID
+                    })
+                end
+            end
+        end
+        
+        -- Enviar ataques del grupo actual (ahora con repeticiones)
+        remoteEvent:FireServer(ataquesGrupo)
+        
+        -- Debug si está activado
+        if config.debugMode then
+            print("Ataque enviado - Mobs:", #grupoActual, "Total ataques:", #ataquesGrupo)
+        end
+    end
+end
+
+--// VARIABLES DE CONFIGURACIÓN
+local config = {
+    enabled = false,
+    autoAttack = false,
+    showNotifications = true,
+    attackInterval = 0.15,
+    mobsPerBatch = 5,
+    repetitionsPerMob = 5,
+    mobCacheInterval = 0.5,
+    abilityCheckInterval = 0.2,
+    selectedAbility = "Todas",
+    selectedMobType = "Todos",
+    debugMode = false
+}
+
+--// RAYFIELD INTERFACE
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+--// CREAR VENTANA PRINCIPAL
+local Window = Rayfield:CreateWindow({
+   Name = "Vesteria Script Pro",
+   LoadingTitle = "Cargando...",
+   LoadingSubtitle = "por Andre",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "VesteriaScriptConfig",
+      FileName = "Config"
+   },
+   Discord = {
+      Enabled = true,
+      Invite = "discord.gg/zKcgnFhGAG",
+      RememberJoins = true
+   },
+   KeySystem = false,
+   KeySettings = {
+      Title = "Vesteria Script",
+      Subtitle = "Sistema de Claves",
+      Note = "No se requiere clave",
+      FileName = "VesteriaKey",
+      SaveKey = true,
+      GrabKeyFromSite = false,
+      Key = "mamendepeggy"
+   }
+})
+
+--// TAB PRINCIPAL
+local MainTab = Window:CreateTab("Principal", 4483362458)
+local MainSection = MainTab:CreateSection("Control Principal")
+
+-- Toggle principal
+local MainToggle = MainSection:CreateToggle("Activar Script", "Activa/Desactiva todo el script", function(state)
+    config.enabled = state
+    if state then
+        Rayfield:Notify({
+            Title = "Script Activado",
+            Content = "El script de Vesteria está ahora funcionando",
+            Duration = 3,
+            Image = 4483362458,
+            Actions = {
+                Ignore = {
+                    Name = "Entendido",
+                    Callback = function()
+                    end
+                }
+            }
+        })
+    else
+        Rayfield:Notify({
+            Title = "Script Desactivado",
+            Content = "El script de Vesteria ha sido detenido",
+            Duration = 3,
+            Image = 4483362458
+        })
+    end
+end)
+
+-- Toggle de ataque automático
+local AutoAttackToggle = MainSection:CreateToggle("Ataque Automático", "Activa el sistema de ataque automático", function(state)
+    config.autoAttack = state
+end)
+
+-- Botón de ataque manual
+local ManualAttackButton = MainSection:CreateButton("Ataque Manual", "Ejecuta un ataque manual inmediatamente", function()
+    if config.enabled then
+        ejecutarAtaqueOptimizado()
+        Rayfield:Notify({
+            Title = "Ataque Manual",
+            Content = "Ataque manual ejecutado",
+            Duration = 2,
+            Image = 4483362458
+        })
+    else
+        Rayfield:Notify({
+            Title = "Error",
+            Content = "El script debe estar activado primero",
+            Duration = 3,
+            Image = 4483362458
+        })
+    end
+end)
+
+--// TAB DE CONFIGURACIÓN
+local ConfigTab = Window:CreateTab("Configuración", 4483362458)
+local ConfigSection = ConfigTab:CreateSection("Ajustes de Ataque")
+
+-- Slider para intervalo de ataque
+local AttackIntervalSlider = ConfigSection:CreateSlider("Intervalo de Ataque", 0.05, 1.0, config.attackInterval, 0.01, function(value)
+    config.attackInterval = value
+end)
+
+-- Slider para mobs por lote
+local MobsPerBatchSlider = ConfigSection:CreateSlider("Mobs por Lote", 1, 10, config.mobsPerBatch, 1, function(value)
+    config.mobsPerBatch = value
+end)
+
+-- Slider para repeticiones por mob
+local RepetitionsSlider = ConfigSection:CreateSlider("Repeticiones por Mob", 1, 10, config.repetitionsPerMob, 1, function(value)
+    config.repetitionsPerMob = value
+end)
+
+local AdvancedSection = ConfigTab:CreateSection("Ajustes Avanzados")
+
+-- Slider para intervalo de cache de mobs
+local MobCacheSlider = AdvancedSection:CreateSlider("Intervalo Cache Mobs", 0.1, 2.0, config.mobCacheInterval, 0.1, function(value)
+    config.mobCacheInterval = value
+end)
+
+-- Slider para intervalo de verificación de habilidad
+local AbilityCheckSlider = AdvancedSection:CreateSlider("Intervalo Verificación Habilidad", 0.1, 1.0, config.abilityCheckInterval, 0.1, function(value)
+    config.abilityCheckInterval = value
+end)
+
+--// TAB DE HABILIDADES
+local AbilitiesTab = Window:CreateTab("Habilidades", 4483362458)
+local AbilitiesSection = AbilitiesTab:CreateSection("Selección de Habilidades")
+
+-- Dropdown para seleccionar habilidad específica
+local abilityNames = {"Todas"}
+for abilityName, _ in pairs(abilityData) do
+    table.insert(abilityNames, abilityName)
+end
+
+local AbilityDropdown = AbilitiesSection:CreateDropdown("Habilidad Seleccionada", abilityNames, function(selected)
+    config.selectedAbility = selected
+end)
+
+-- Botón para mostrar información de la habilidad actual
+local AbilityInfoButton = AbilitiesSection:CreateButton("Info Habilidad Actual", "Muestra información de la habilidad equipada", function()
+    local guid, id = getAbilityGUIDAndID()
+    if guid and id then
+        local abilityName = "Desconocida"
+        for name, data in pairs(abilityData) do
+            if data.ID == id then
+                abilityName = name
+                break
+            end
+        end
+        
+        Rayfield:Notify({
+            Title = "Habilidad Actual",
+            Content = string.format("Nombre: %s\nID: %d\nGUID: %s", abilityName, id, string.sub(guid, 1, 8) .. "..."),
+            Duration = 5,
+            Image = 4483362458
+        })
+    else
+        Rayfield:Notify({
+            Title = "Sin Habilidad",
+            Content = "No hay habilidad equipada actualmente",
+            Duration = 3,
+            Image = 4483362458
+        })
+    end
+end)
+
+--// TAB DE MOBS
+local MobsTab = Window:CreateTab("Mobs", 4483362458)
+local MobsSection = MobsTab:CreateSection("Configuración de Mobs")
+
+-- Dropdown para seleccionar tipo de mob
+local mobTypes = {"Todos"}
+for _, mobName in ipairs(listaDeMobs) do
+    table.insert(mobTypes, mobName)
+end
+
+local MobTypeDropdown = MobsSection:CreateDropdown("Tipo de Mob", mobTypes, function(selected)
+    config.selectedMobType = selected
+end)
+
+-- Botón para actualizar lista de mobs
+local UpdateMobsButton = MobsSection:CreateButton("Actualizar Lista Mobs", "Actualiza la lista de mobs disponibles", function()
+    actualizarCacheMobs()
+    local mobCount = 0
+    for _, mobs in pairs(cachedMobs) do
+        mobCount = mobCount + #mobs
+    end
+    
+    Rayfield:Notify({
+        Title = "Mobs Actualizados",
+        Content = string.format("Total de mobs encontrados: %d", mobCount),
+        Duration = 3,
+        Image = 4483362458
+    })
+end)
+
+--// TAB DE ESTADÍSTICAS
+local StatsTab = Window:CreateTab("Estadísticas", 4483362458)
+local StatsSection = StatsTab:CreateSection("Información del Sistema")
+
+-- Labels para mostrar estadísticas en tiempo real
+local StatsLabel = StatsSection:CreateLabel("Esperando datos...")
+
+-- Botón para actualizar estadísticas
+local UpdateStatsButton = StatsSection:CreateButton("Actualizar Estadísticas", "Actualiza las estadísticas del sistema", function()
+    local mobCount = 0
+    for _, mobs in pairs(cachedMobs) do
+        mobCount = mobCount + #mobs
+    end
+    
+    local player = Players.LocalPlayer
+    local charModel = workspace.placeFolders.entityManifestCollection:FindFirstChild(player.Name)
+    local hasHitbox = charModel and charModel:FindFirstChild("hitbox") ~= nil
+    
+    StatsLabel:Set(string.format("Mobs en Cache: %d\nJugador: %s\nHitbox: %s\nHabilidad ID: %s\nGUID: %s",
+        mobCount,
+        player.Name,
+        hasHitbox and "Sí" or "No",
+        cachedID or "N/A",
+        cachedGUID and string.sub(cachedGUID, 1, 8) .. "..." or "N/A"
+    ))
+end)
+
+--// TAB DE DEBUG
+local DebugTab = Window:CreateTab("Debug", 4483362458)
+local DebugSection = DebugTab:CreateSection("Herramientas de Debug")
+
+-- Toggle para modo debug
+local DebugToggle = DebugSection:CreateToggle("Modo Debug", "Activa mensajes de debug detallados", function(state)
+    config.debugMode = state
+end)
+
+-- Botón para limpiar cache
+local ClearCacheButton = DebugSection:CreateButton("Limpiar Cache", "Limpia todo el cache del sistema", function()
+    cachedMobs = {}
+    allMobsList = {}
+    currentMobIndex = 1
+    cachedGUID = nil
+    cachedID = nil
+    
+    Rayfield:Notify({
+        Title = "Cache Limpiado",
+        Content = "Todo el cache ha sido limpiado",
+        Duration = 2,
+        Image = 4483362458
+    })
+end)
+
+-- Botón para test de conexión
+local TestConnectionButton = DebugSection:CreateButton("Test Conexión", "Prueba la conexión con el servidor", function()
+    local success, _ = pcall(function()
+        local remoteEvent = ReplicatedStorage:WaitForChild("network"):WaitForChild("RemoteEvent"):WaitForChild("playerRequest_damageEntity_batch")
+        return remoteEvent ~= nil
+    end)
+    
+    if success then
+        Rayfield:Notify({
+            Title = "Conexión Exitosa",
+            Content = "La conexión con el servidor está funcionando",
+            Duration = 3,
+            Image = 4483362458
+        })
+    else
+        Rayfield:Notify({
+            Title = "Error de Conexión",
+            Content = "No se pudo conectar con el servidor",
+            Duration = 3,
+            Image = 4483362458
+        })
+    end
+end)
+
+--// SISTEMA PRINCIPAL OPTIMIZADO
+local lastAttackTime = 0
+
+task.spawn(function()
+    while true do
+        local currentTime = tick()
+        
+        -- Solo ejecutar si el script está habilitado
+        if config.enabled then
+            -- Actualizar habilidad cada ABILITY_CHECK_INTERVAL
+            if currentTime - lastAbilityUpdate >= config.abilityCheckInterval then
+                local nuevoGUID, nuevoID = getAbilityGUIDAndID()
+                if nuevoGUID and nuevoGUID ~= cachedGUID then
+                    cachedGUID = nuevoGUID
+                    cachedID = nuevoID
+                    
+                    -- Notificar cambio de habilidad si está habilitado
+                    if config.showNotifications then
+                        local abilityName = "Desconocida"
+                        for name, data in pairs(abilityData) do
+                            if data.ID == nuevoID then
+                                abilityName = name
+                                break
+                            end
+                        end
+                        
+                        Rayfield:Notify({
+                            Title = "Nueva Habilidad Detectada",
+                            Content = string.format("Habilidad: %s (ID: %d)", abilityName, nuevoID),
+                            Duration = 3,
+                            Image = 4483362458
+                        })
+                    end
+                end
+                lastAbilityUpdate = currentTime
+            end
+            
+            -- Actualizar cache de mobs cada MOB_CACHE_INTERVAL
+            if currentTime - lastMobUpdate >= config.mobCacheInterval then
+                actualizarCacheMobs()
+                lastMobUpdate = currentTime
+            end
+            
+            -- Ejecutar ataque cada ATTACK_INTERVAL
+            if currentTime - lastAttackTime >= config.attackInterval then
+                pcall(ejecutarAtaqueOptimizado)
+                lastAttackTime = currentTime
+            end
+        end
+        
+        -- Usar Heartbeat para mejor rendimiento
+        RunService.Heartbeat:Wait()
+    end
+end)
+
+--// NOTIFICACIÓN DE INICIO
+Rayfield:Notify({
+    Title = "Vesteria Script Pro",
+    Content = "Script cargado exitosamente. ¡Disfruta del poder!",
+    Duration = 5,
+    Image = 4483362458,
+    Actions = {
+        Ignore = {
+            Name = "¡Gracias!",
+            Callback = function()
+            end
+        }
+    }
+})
