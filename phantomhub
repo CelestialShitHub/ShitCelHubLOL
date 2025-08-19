@@ -16,7 +16,7 @@ local abilityData = {
     ["Zap"] = {ID = 32, RemoteNames = {"bolt"}},
 
     -- Warrior
-    ["Spin Slash"] = {ID = 26, RemoteNames = {"uppercut"}},
+    ["Spin Slash"] = {ID = 26, RemoteNames = {"holo-ring"}},
     ["Blasting Slash"] = {ID = 80, RemoteNames = {"aftershock-1", "aftershock-2", "aftershock-3", "tombSpike"}},
     ["Ground Slam"] = {ID = 5, RemoteNames = {"spike", "warlord", "warlord-outer", "divineSlam", "divineSlam-sword", "divineSlam-outer", "shockwave", "shockwave-outer", "slash", "aftershock", "agile-strike", "bee-attack", "ghost-fire", "ghost-explode", "ghost-ring"}},
 
@@ -98,8 +98,6 @@ for _, mobName in ipairs(listaDeMobs) do
     mobSet[mobName] = true
 end
 
-
-
 --// VARIABLES DE OPTIMIZACIÓN
 local cachedGUID, cachedID = nil, nil
 local cachedMobs = {}
@@ -120,21 +118,6 @@ local remoteNamesCache = {}
 for _, data in pairs(abilityData) do
     remoteNamesCache[data.ID] = data.RemoteNames
 end
-
---// VARIABLES DE CONFIGURACIÓN
-local config = {
-    enabled = false,
-    autoAttack = false,
-    showNotifications = true,
-    attackInterval = 0.15,
-    mobsPerBatch = 5,
-    repetitionsPerMob = 5,
-    mobCacheInterval = 0.5,
-    abilityCheckInterval = 0.2,
-    selectedAbility = "Todas",
-    selectedMobType = "Todos",
-    debugMode = false
-}
 
 --// FUNCIONES DE UTILIDAD OPTIMIZADAS
 local function isValidGUID(guid)
@@ -188,14 +171,11 @@ local function actualizarCacheMobs()
     for i = 1, #entityCollection do
         local instancia = entityCollection[i]
         if instancia:IsA("BasePart") and mobSet[instancia.Name] then
-            -- Filtrar por tipo de mob seleccionado
-            if config and (config.selectedMobType == "Todos" or instancia.Name == config.selectedMobType) then
-                if not nuevoCache[instancia.Name] then
-                    nuevoCache[instancia.Name] = {}
-                end
-                table.insert(nuevoCache[instancia.Name], instancia)
-                table.insert(nuevaListaTotal, instancia)
+            if not nuevoCache[instancia.Name] then
+                nuevoCache[instancia.Name] = {}
             end
+            table.insert(nuevoCache[instancia.Name], instancia)
+            table.insert(nuevaListaTotal, instancia)
         end
     end
     
@@ -206,29 +186,11 @@ local function actualizarCacheMobs()
     if currentMobIndex > #allMobsList then
         currentMobIndex = 1
     end
-    
-    -- Debug si está activado
-    if config and config.debugMode then
-        print("Cache actualizado - Mobs encontrados:", #nuevaListaTotal)
-    end
 end
 
 --// FUNCIÓN OPTIMIZADA DE ATAQUE (GRUPOS DE 5 MOBS x 5 REPETICIONES)
 local function ejecutarAtaqueOptimizado()
-    if not config.enabled or not config.autoAttack then return end
     if not cachedGUID or not cachedID or #allMobsList == 0 then return end
-    
-    -- Verificar si la habilidad seleccionada coincide
-    if config.selectedAbility ~= "Todas" then
-        local abilityFound = false
-        for name, data in pairs(abilityData) do
-            if name == config.selectedAbility and data.ID == cachedID then
-                abilityFound = true
-                break
-            end
-        end
-        if not abilityFound then return end
-    end
     
     local remoteNames = remoteNamesCache[cachedID]
     if not remoteNames then return end
@@ -240,7 +202,7 @@ local function ejecutarAtaqueOptimizado()
     local mobsProcessados = 0
     
     -- Obtener hasta MOBS_PER_BATCH mobs comenzando desde currentMobIndex
-    while mobsProcessados < config.mobsPerBatch and #allMobsList > 0 do
+    while mobsProcessados < MOBS_PER_BATCH and #allMobsList > 0 do
         if currentMobIndex > #allMobsList then
             currentMobIndex = 1 -- Reiniciar el ciclo
         end
@@ -274,7 +236,7 @@ local function ejecutarAtaqueOptimizado()
             for j = 1, #remoteNames do
                 local remoteName = remoteNames[j]
                 -- Repetir cada ataque REPETICIONES_POR_MOB veces
-                for rep = 1, config.repetitionsPerMob do
+                for rep = 1, REPETICIONES_POR_MOB do
                     table.insert(ataquesGrupo, {
                         mob,
                         mob.Position,
@@ -289,293 +251,8 @@ local function ejecutarAtaqueOptimizado()
         
         -- Enviar ataques del grupo actual (ahora con repeticiones)
         remoteEvent:FireServer(ataquesGrupo)
-        
-        -- Debug si está activado
-        if config.debugMode then
-            print("Ataque enviado - Mobs:", #grupoActual, "Total ataques:", #ataquesGrupo)
-        end
     end
 end
-
---// VARIABLES DE CONFIGURACIÓN
-local config = {
-    enabled = false,
-    autoAttack = false,
-    showNotifications = true,
-    attackInterval = 0.15,
-    mobsPerBatch = 5,
-    repetitionsPerMob = 5,
-    mobCacheInterval = 0.5,
-    abilityCheckInterval = 0.2,
-    selectedAbility = "Todas",
-    selectedMobType = "Todos",
-    debugMode = false
-}
-
---// RAYFIELD INTERFACE
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
---// CREAR VENTANA PRINCIPAL
-local Window = Rayfield:CreateWindow({
-   Name = "Vesteria Script Pro",
-   LoadingTitle = "Cargando...",
-   LoadingSubtitle = "por Andre",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "VesteriaScriptConfig",
-      FileName = "Config"
-   },
-   Discord = {
-      Enabled = true,
-      Invite = "discord.gg/zKcgnFhGAG",
-      RememberJoins = true
-   },
-   KeySystem = false,
-   KeySettings = {
-      Title = "Vesteria Script",
-      Subtitle = "Sistema de Claves",
-      Note = "No se requiere clave",
-      FileName = "VesteriaKey",
-      SaveKey = true,
-      GrabKeyFromSite = false,
-      Key = "mamendepeggy"
-   }
-})
-
---// TAB PRINCIPAL
-local MainTab = Window:CreateTab("Principal", 4483362458)
-local MainSection = MainTab:CreateSection("Control Principal")
-
--- Toggle principal
-local MainToggle = MainSection:CreateToggle("Activar Script", "Activa/Desactiva todo el script", function(state)
-    config.enabled = state
-    if state then
-        Rayfield:Notify({
-            Title = "Script Activado",
-            Content = "El script de Vesteria está ahora funcionando",
-            Duration = 3,
-            Image = 4483362458,
-            Actions = {
-                Ignore = {
-                    Name = "Entendido",
-                    Callback = function()
-                    end
-                }
-            }
-        })
-    else
-        Rayfield:Notify({
-            Title = "Script Desactivado",
-            Content = "El script de Vesteria ha sido detenido",
-            Duration = 3,
-            Image = 4483362458
-        })
-    end
-end)
-
--- Toggle de ataque automático
-local AutoAttackToggle = MainSection:CreateToggle("Ataque Automático", "Activa el sistema de ataque automático", function(state)
-    config.autoAttack = state
-end)
-
--- Botón de ataque manual
-local ManualAttackButton = MainSection:CreateButton("Ataque Manual", "Ejecuta un ataque manual inmediatamente", function()
-    if config.enabled then
-        ejecutarAtaqueOptimizado()
-        Rayfield:Notify({
-            Title = "Ataque Manual",
-            Content = "Ataque manual ejecutado",
-            Duration = 2,
-            Image = 4483362458
-        })
-    else
-        Rayfield:Notify({
-            Title = "Error",
-            Content = "El script debe estar activado primero",
-            Duration = 3,
-            Image = 4483362458
-        })
-    end
-end)
-
---// TAB DE CONFIGURACIÓN
-local ConfigTab = Window:CreateTab("Configuración", 4483362458)
-local ConfigSection = ConfigTab:CreateSection("Ajustes de Ataque")
-
--- Slider para intervalo de ataque
-local AttackIntervalSlider = ConfigSection:CreateSlider("Intervalo de Ataque", 0.05, 1.0, config.attackInterval, 0.01, function(value)
-    config.attackInterval = value
-end)
-
--- Slider para mobs por lote
-local MobsPerBatchSlider = ConfigSection:CreateSlider("Mobs por Lote", 1, 10, config.mobsPerBatch, 1, function(value)
-    config.mobsPerBatch = value
-end)
-
--- Slider para repeticiones por mob
-local RepetitionsSlider = ConfigSection:CreateSlider("Repeticiones por Mob", 1, 10, config.repetitionsPerMob, 1, function(value)
-    config.repetitionsPerMob = value
-end)
-
-local AdvancedSection = ConfigTab:CreateSection("Ajustes Avanzados")
-
--- Slider para intervalo de cache de mobs
-local MobCacheSlider = AdvancedSection:CreateSlider("Intervalo Cache Mobs", 0.1, 2.0, config.mobCacheInterval, 0.1, function(value)
-    config.mobCacheInterval = value
-end)
-
--- Slider para intervalo de verificación de habilidad
-local AbilityCheckSlider = AdvancedSection:CreateSlider("Intervalo Verificación Habilidad", 0.1, 1.0, config.abilityCheckInterval, 0.1, function(value)
-    config.abilityCheckInterval = value
-end)
-
---// TAB DE HABILIDADES
-local AbilitiesTab = Window:CreateTab("Habilidades", 4483362458)
-local AbilitiesSection = AbilitiesTab:CreateSection("Selección de Habilidades")
-
--- Dropdown para seleccionar habilidad específica
-local abilityNames = {"Todas"}
-for abilityName, _ in pairs(abilityData) do
-    table.insert(abilityNames, abilityName)
-end
-
-local AbilityDropdown = AbilitiesSection:CreateDropdown("Habilidad Seleccionada", abilityNames, function(selected)
-    config.selectedAbility = selected
-end)
-
--- Botón para mostrar información de la habilidad actual
-local AbilityInfoButton = AbilitiesSection:CreateButton("Info Habilidad Actual", "Muestra información de la habilidad equipada", function()
-    local guid, id = getAbilityGUIDAndID()
-    if guid and id then
-        local abilityName = "Desconocida"
-        for name, data in pairs(abilityData) do
-            if data.ID == id then
-                abilityName = name
-                break
-            end
-        end
-        
-        Rayfield:Notify({
-            Title = "Habilidad Actual",
-            Content = string.format("Nombre: %s\nID: %d\nGUID: %s", abilityName, id, string.sub(guid, 1, 8) .. "..."),
-            Duration = 5,
-            Image = 4483362458
-        })
-    else
-        Rayfield:Notify({
-            Title = "Sin Habilidad",
-            Content = "No hay habilidad equipada actualmente",
-            Duration = 3,
-            Image = 4483362458
-        })
-    end
-end)
-
---// TAB DE MOBS
-local MobsTab = Window:CreateTab("Mobs", 4483362458)
-local MobsSection = MobsTab:CreateSection("Configuración de Mobs")
-
--- Dropdown para seleccionar tipo de mob
-local mobTypes = {"Todos"}
-for _, mobName in ipairs(listaDeMobs) do
-    table.insert(mobTypes, mobName)
-end
-
-local MobTypeDropdown = MobsSection:CreateDropdown("Tipo de Mob", mobTypes, function(selected)
-    config.selectedMobType = selected
-end)
-
--- Botón para actualizar lista de mobs
-local UpdateMobsButton = MobsSection:CreateButton("Actualizar Lista Mobs", "Actualiza la lista de mobs disponibles", function()
-    actualizarCacheMobs()
-    local mobCount = 0
-    for _, mobs in pairs(cachedMobs) do
-        mobCount = mobCount + #mobs
-    end
-    
-    Rayfield:Notify({
-        Title = "Mobs Actualizados",
-        Content = string.format("Total de mobs encontrados: %d", mobCount),
-        Duration = 3,
-        Image = 4483362458
-    })
-end)
-
---// TAB DE ESTADÍSTICAS
-local StatsTab = Window:CreateTab("Estadísticas", 4483362458)
-local StatsSection = StatsTab:CreateSection("Información del Sistema")
-
--- Labels para mostrar estadísticas en tiempo real
-local StatsLabel = StatsSection:CreateLabel("Esperando datos...")
-
--- Botón para actualizar estadísticas
-local UpdateStatsButton = StatsSection:CreateButton("Actualizar Estadísticas", "Actualiza las estadísticas del sistema", function()
-    local mobCount = 0
-    for _, mobs in pairs(cachedMobs) do
-        mobCount = mobCount + #mobs
-    end
-    
-    local player = Players.LocalPlayer
-    local charModel = workspace.placeFolders.entityManifestCollection:FindFirstChild(player.Name)
-    local hasHitbox = charModel and charModel:FindFirstChild("hitbox") ~= nil
-    
-    StatsLabel:Set(string.format("Mobs en Cache: %d\nJugador: %s\nHitbox: %s\nHabilidad ID: %s\nGUID: %s",
-        mobCount,
-        player.Name,
-        hasHitbox and "Sí" or "No",
-        cachedID or "N/A",
-        cachedGUID and string.sub(cachedGUID, 1, 8) .. "..." or "N/A"
-    ))
-end)
-
---// TAB DE DEBUG
-local DebugTab = Window:CreateTab("Debug", 4483362458)
-local DebugSection = DebugTab:CreateSection("Herramientas de Debug")
-
--- Toggle para modo debug
-local DebugToggle = DebugSection:CreateToggle("Modo Debug", "Activa mensajes de debug detallados", function(state)
-    config.debugMode = state
-end)
-
--- Botón para limpiar cache
-local ClearCacheButton = DebugSection:CreateButton("Limpiar Cache", "Limpia todo el cache del sistema", function()
-    cachedMobs = {}
-    allMobsList = {}
-    currentMobIndex = 1
-    cachedGUID = nil
-    cachedID = nil
-    
-    Rayfield:Notify({
-        Title = "Cache Limpiado",
-        Content = "Todo el cache ha sido limpiado",
-        Duration = 2,
-        Image = 4483362458
-    })
-end)
-
--- Botón para test de conexión
-local TestConnectionButton = DebugSection:CreateButton("Test Conexión", "Prueba la conexión con el servidor", function()
-    local success, _ = pcall(function()
-        local remoteEvent = ReplicatedStorage:WaitForChild("network"):WaitForChild("RemoteEvent"):WaitForChild("playerRequest_damageEntity_batch")
-        return remoteEvent ~= nil
-    end)
-    
-    if success then
-        Rayfield:Notify({
-            Title = "Conexión Exitosa",
-            Content = "La conexión con el servidor está funcionando",
-            Duration = 3,
-            Image = 4483362458
-        })
-    else
-        Rayfield:Notify({
-            Title = "Error de Conexión",
-            Content = "No se pudo conectar con el servidor",
-            Duration = 3,
-            Image = 4483362458
-        })
-    end
-end)
 
 --// SISTEMA PRINCIPAL OPTIMIZADO
 local lastAttackTime = 0
@@ -584,65 +261,29 @@ task.spawn(function()
     while true do
         local currentTime = tick()
         
-        -- Solo ejecutar si el script está habilitado
-        if config.enabled then
-            -- Actualizar habilidad cada ABILITY_CHECK_INTERVAL
-            if currentTime - lastAbilityUpdate >= config.abilityCheckInterval then
-                local nuevoGUID, nuevoID = getAbilityGUIDAndID()
-                if nuevoGUID and nuevoGUID ~= cachedGUID then
-                    cachedGUID = nuevoGUID
-                    cachedID = nuevoID
-                    
-                    -- Notificar cambio de habilidad si está habilitado
-                    if config.showNotifications then
-                        local abilityName = "Desconocida"
-                        for name, data in pairs(abilityData) do
-                            if data.ID == nuevoID then
-                                abilityName = name
-                                break
-                            end
-                        end
-                        
-                        Rayfield:Notify({
-                            Title = "Nueva Habilidad Detectada",
-                            Content = string.format("Habilidad: %s (ID: %d)", abilityName, nuevoID),
-                            Duration = 3,
-                            Image = 4483362458
-                        })
-                    end
-                end
-                lastAbilityUpdate = currentTime
+        -- Actualizar habilidad cada ABILITY_CHECK_INTERVAL
+        if currentTime - lastAbilityUpdate >= ABILITY_CHECK_INTERVAL then
+            local nuevoGUID, nuevoID = getAbilityGUIDAndID()
+            if nuevoGUID and nuevoGUID ~= cachedGUID then
+                cachedGUID = nuevoGUID
+                cachedID = nuevoID
             end
-            
-            -- Actualizar cache de mobs cada MOB_CACHE_INTERVAL
-            if currentTime - lastMobUpdate >= config.mobCacheInterval then
-                actualizarCacheMobs()
-                lastMobUpdate = currentTime
-            end
-            
-            -- Ejecutar ataque cada ATTACK_INTERVAL
-            if currentTime - lastAttackTime >= config.attackInterval then
-                pcall(ejecutarAtaqueOptimizado)
-                lastAttackTime = currentTime
-            end
+            lastAbilityUpdate = currentTime
+        end
+        
+        -- Actualizar cache de mobs cada MOB_CACHE_INTERVAL
+        if currentTime - lastMobUpdate >= MOB_CACHE_INTERVAL then
+            actualizarCacheMobs()
+            lastMobUpdate = currentTime
+        end
+        
+        -- Ejecutar ataque cada ATTACK_INTERVAL
+        if currentTime - lastAttackTime >= ATTACK_INTERVAL then
+            pcall(ejecutarAtaqueOptimizado)
+            lastAttackTime = currentTime
         end
         
         -- Usar Heartbeat para mejor rendimiento
         RunService.Heartbeat:Wait()
     end
 end)
-
---// NOTIFICACIÓN DE INICIO
-Rayfield:Notify({
-    Title = "Vesteria Script Pro",
-    Content = "Script cargado exitosamente. ¡Disfruta del poder!",
-    Duration = 5,
-    Image = 4483362458,
-    Actions = {
-        Ignore = {
-            Name = "¡Gracias!",
-            Callback = function()
-            end
-        }
-    }
-})
